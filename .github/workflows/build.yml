@@ -1,0 +1,111 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '17'
+
+      - name: Cache Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[ci skip]')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '17'
+
+      - name: Cache Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Set up Git for Maven Release Plugin
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git config --global push.default simple
+
+      - name: Prepare release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: mvn release:prepare -Dresume=false -B
+
+      - name: Perform release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: mvn release:perform -B
+
+      - name: Deploy to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: mvn deploy -DskipTests -B -s settings.xml
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Changes in this Release
+            - Maven BOM for microservices
+          draft: false
+          prerelease: false
+
+      - name: Upload Javadoc and sources
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts
+          path: target/*.jar,target/*.jar.asc,target/*.zip,target/*.tar.gz  # Adjust the paths as needed to include Javadoc and sources
+
+      - name: Get upload URL
+        id: get_upload_url
+        run: |
+          echo "::set-output name=url::$(jq -r '.upload_url' <<< $(curl -s -H \"Authorization: token $GITHUB_TOKEN\" -H \"Accept: application/vnd.github.v3+json\" ${{ steps.create_release.outputs.upload_url }} | sed 's/{?name,label}//'))"
+
+      - name: Upload artifacts to GitHub Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_upload_url.outputs.url }}
+          asset_path: target/*.jar,target/*.jar.asc,target/*.zip,target/*.tar.gz  # Adjust the paths as needed to include Javadoc and sources
+          asset_name: ${{ runner.os }}-artifacts.zip  # You can customize the name of the uploaded zip file
+          asset_content_type: application/zip
