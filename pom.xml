@@ -1,11 +1,13 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>3.3.0</version>
-    <relativePath />
+    <relativePath/>
   </parent>
 
   <groupId>com.example</groupId>
@@ -128,6 +130,26 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.asciidoctor</groupId>
+        <artifactId>asciidoctor-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
         <configuration>
@@ -135,6 +157,15 @@
           <tagNameFormat>@{project.version}</tagNameFormat>
           <scmCommentPrefix>[ci skip]</scmCommentPrefix>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.sonarsource.scanner.maven</groupId>
+        <artifactId>sonar-maven-plugin</artifactId>
+        <version>3.7.0.1746</version>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -161,16 +192,28 @@
                 <artifactId>lombok-mapstruct-binding</artifactId>
                 <version>0.2.0</version>
               </path>
+              <path>
+                <groupId>com.github.therapi</groupId>
+                <artifactId>therapi-runtime-javadoc-scribe</artifactId>
+                <version>0.13.0</version>
+              </path>
             </annotationProcessorPaths>
             <compilerArgs>
-              <compilerArg>
-                -Amapstruct.defaultComponentModel=spring
-              </compilerArg>
-              <compilerArg>
-                -Amapstruct.unmappedTargetPolicy=IGNORE
-              </compilerArg>
+              <arg>-Amapstruct.defaultComponentModel=spring</arg>
+              <arg>-Amapstruct.unmappedTargetPolicy=IGNORE</arg>
+              <arg>-Amapstruct.suppressGeneratorTimestamp=true</arg>
+              <arg>-Amapstruct.suppressGeneratorVersionInfoComment=true</arg>
+              <arg>-Amapstruct.verbose=true</arg>
             </compilerArgs>
           </configuration>
+          <dependencies>
+            <!-- Annotation processor -->
+            <dependency>
+              <groupId>com.github.therapi</groupId>
+              <artifactId>therapi-runtime-javadoc</artifactId>
+              <version>0.13.0</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.springframework.boot</groupId>
@@ -187,6 +230,7 @@
         <plugin>
           <groupId>org.asciidoctor</groupId>
           <artifactId>asciidoctor-maven-plugin</artifactId>
+          <version>3.0.0</version>
           <executions>
             <execution>
               <id>generate-docs</id>
@@ -230,8 +274,24 @@
           </executions>
         </plugin>
         <plugin>
-          <groupId>org.sonarsource.scanner.maven</groupId>
-          <artifactId>sonar-maven-plugin</artifactId>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>0.8.2</version>
+          <executions>
+            <execution>
+              <goals>
+                <goal>prepare-agent</goal>
+              </goals>
+            </execution>
+            <!-- attached to Maven test phase -->
+            <execution>
+              <id>report</id>
+              <phase>test</phase>
+              <goals>
+                <goal>report</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -260,6 +320,32 @@
             <!-- Exclude Lombok enhanced classes -->
             <excludePackageNames>*.model.*:*.mapper.*:*.domain.*:*.mappers.*</excludePackageNames>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>enforce-versions</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <rules>
+                  <requireMavenVersion>
+                    <version>[3.6.0,)</version>
+                  </requireMavenVersion>
+                  <requireJavaVersion>
+                    <version>17</version>
+                  </requireJavaVersion>
+                  <requireReleaseDeps>
+                    <onlyWhenRelease>true</onlyWhenRelease>
+                    <message>Release builds must not have on snapshot dependencies</message>
+                  </requireReleaseDeps>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
