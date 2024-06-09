@@ -10,7 +10,7 @@
 
   <groupId>com.example</groupId>
   <artifactId>mssc-brewery-bom</artifactId>
-  <version>0.0.4-SNAPSHOT</version>
+  <version>0.0.4</version>
   <packaging>pom</packaging>
 
   <name>mssc-brewery-bom</name>
@@ -37,7 +37,7 @@
     <connection>scm:git:${project.scm.url}</connection>
     <developerConnection>scm:git:${project.scm.url}</developerConnection>
     <url>https://github.com/skjalal/mssc-brewery-bom.git</url>
-    <tag>HEAD</tag>
+    <tag>0.0.4</tag>
   </scm>
 
   <organization>
